@@ -40,6 +40,6 @@ void loop() {
     Serial.print("altitude:");
     Serial.print(bme.readAltitude(SEALEVELPRESSURE_HPA));
     Serial.println("m");
-    delay(40);
+    delay(50);
   }
 }
