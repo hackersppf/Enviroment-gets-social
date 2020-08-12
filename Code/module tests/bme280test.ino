@@ -1,3 +1,6 @@
+//Πρόγραμμα για την δοκιμή του αισθητήρα bme280
+//Πηγή: https://www.waveshare.com/wiki/File:BME280-Environmental-Sensor-Demo-Code.7z
+
 //Βιβλιοθήκη για την επικοινωνία I2C που χρειάζεται ο αισθητήρας bme280
 #include <Wire.h>             
 //Βιβλιοθήκες που χρειάζονται για τον αισθητήρα bme280
