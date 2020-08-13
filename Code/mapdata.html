@@ -1,0 +1,141 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Enviroment gets social! Μετρήσεις στον χάρτη!</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+	<link rel="shortcut icon" type="image/x-icon" href="docs/images/favicon.ico" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.6.0/dist/leaflet.css" integrity="sha512-xwE/Az9zrjBIphAcBb3F6JVqxf46+CDLwfLMHloNu6KEQCAWi6HcDUbeOfBIptF7tcCzusKFjFw2yuvEpDL9wQ==" crossorigin=""/>
+  <link rel="stylesheet" href="index.css"/>
+  <script src="https://unpkg.com/leaflet@1.6.0/dist/leaflet.js" integrity="sha512-gZwIG9x3wUXg2hdXF6+rVkLF/0Vi9U8D2Ntg4Ga5I5BZpVkVxlJWbSQtXPSiUTtC0TjtGOmxa1AJPuV0CPthew==" crossorigin=""></script>
+	<!-- The core Firebase JS SDK is always required and must be listed first -->
+	<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase.js"></script>
+
+	<!-- TODO: Add SDKs for Firebase products that you want to use
+     https://firebase.google.com/docs/web/setup#available-libraries -->
+	<script src="https://www.gstatic.com/firebasejs/7.6.1/firebase-analytics.js"></script>
+
+	<style>
+		#enviroMap {
+    	height: 600px;
+      width: 400px;
+  	}
+		body {
+    	padding: 0;
+    	margin: 0;
+		}
+		html, body, #enviroMap {
+    	height: 100%;
+    	width: 100vw;
+		}
+
+  </style>
+</head>
+
+<body>
+
+	<div id="enviroMap"></div>
+
+	<script>
+
+		//Αρχικά δημιουργώ τον χάρτη και τον βάζω στην θέση 0,0 και χωρίς ζουμ
+		const mymap = L.map('enviroMap').fitWorld();
+		//Δημιουργεί τη σταθερή μεταβλητή του url για τα tiles του χάρτη
+    const tileUrl = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
+    //Απαιτείται για λόγους copyright
+    const attribution = '&copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors';
+    //Εισάγει τα tiles στον χάρτη
+    const tiles = L.tileLayer(tileUrl , {attribution});
+		tiles.addTo(mymap);
+
+		//Κάνω την σύνδεση με την βάση μας στην firebase
+		var firebaseConfig = {
+	    apiKey: "---",
+	    authDomain: "---",
+	    databaseURL: "---",
+	    projectId: "---",
+	    storageBucket: "---",
+	    messagingSenderId: "259127952727",
+	    appId: "1:259127952727:web:db61d455a0442070d5ea12",
+	    measurementId: "G-E6R3VD36S8"
+	  };
+
+	  // Αρχικοποιώ την σύνδεση
+	  firebase.initializeApp(firebaseConfig);
+		//Δημιουργώ μια μεταβλητή για να αποθηκεύσω την αναφορά στην βάση δεδομένων
+		database = firebase.database();
+		//Δημιουργώ μια μεταβλητή για να αποθηκεύσω την αναφορά στα δεδομένα της βάσης
+		var ref = database.ref('coconut01');
+		//Όταν πάρω τα δεδομένα σωστά θα τρέξει η gotData αλλιώς θα τρέξει η errData
+		ref.on('value',gotData,errData);
+
+
+		//Κάθε φορά που παίρνω δεδομένα θα τρέχει η gotData
+		function gotData(data) {
+
+			//Παίρνω τα δεδομένα στην μεταβλητή μετρήσεις
+			var metriseis = data.val();
+			//Παίρνω τα κλειδιά (όνομα χρήστη και ημερομηνία-ώρα) στην μεταβλητή keys
+			var keys = Object.keys(metriseis);
+			//Δημιουργώ έναν άδειο πίνακα markers στον οποίο θα βάζω τους markers με την κάθε μέτρηση
+			var markers = [];
+			//Για κάθε στοιχεία της βάσης δεδομένων κάνω τα παρακάτω
+			for (var i = 0; i < keys.length; i++) {
+
+				//var key = keys[i];
+				//Στην λίστα key_data κρατάω το όνομα χρήστη και την ημερομηνία τα οποία χωρίζονται με *
+				var key_data = keys[i].split("*");
+				var username = key_data[0];
+				var date = key_data[1];
+
+				//Στην λίστα metrisi_data κρατάω τo latitude το longtitude την θερμοκαρασία την υγρασία το cο το μεθάνιο τα μικροσωματίδια και τον ήχο τα οποία χωρίζονται με *
+				var metrisi_data = metriseis[keys[i]].split("*");
+				var latitude = metrisi_data[0].substr(1,metrisi_data[0].lenght);
+				var longtitude = metrisi_data[1];
+				var temperature = metrisi_data[2];
+				var humidity = metrisi_data[3];
+				var pressure = metrisi_data[4];
+				var altitude = metrisi_data[5];
+				var particles = metrisi_data[6];
+				var sound = metrisi_data[7].substr(0,metrisi_data[7].length-1);
+
+
+				//Προσθέτω έναν marker στον πίνακα markers με το γεωγραφικό πλάτος και μήκος της κάθε μέτρησης
+				markers[i] = L.marker([latitude, longtitude]).addTo(mymap);
+				//Προσθέτω στον marker τα δεδομένα σε παράθυρο pop up
+				markers[i].bindPopup("<b>Measurement by "+username+"</b><br>Date:"+date+"<br>Temperature:"+temperature+" Celcius<br>Humidity:"+humidity+"%<br>Particles concentration:"+particles+"mg/m3<br>Pressure:"+pressure+" hPA<br>Altitude:"+altitude+" meters<br>Noise Level:"+sound+" raw value - experimental");
+	  	}
+			//Ορίζω το focus του χάρτη στο τελευταίο γεωγραφικό πλάτος και μήκος που είχαν τα δεδομένα, δηλαδή στην τελευταία μέτρηση
+			mymap.setView([latitude, longtitude], 15);
+
+	}
+
+	//Εμφανίζουμε την θέση μας στον χάρτη με έναν marker και έναν κύκλο που δείχνει την ακρίβεια
+	function onLocationFound(e) {
+		var radius = e.accuracy / 2;
+
+		L.marker(e.latlng).addTo(mymap)
+			.bindPopup("You are within " + radius + " meters from this point").openPopup();
+
+		L.circle(e.latlng, radius).addTo(mymap);
+	}
+
+	function onLocationError(e) {
+		alert(e.message);
+	}
+
+	mymap.on('locationfound', onLocationFound);
+	mymap.on('locationerror', onLocationError);
+
+	mymap.locate({setView: true, maxZoom: 16});
+
+	function errData(err) {
+		console.log('Error!');
+		console.log(err);
+	}
+
+</script>
+
+</body>
+</html>
