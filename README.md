@@ -1,6 +1,6 @@
 # Enviroment-gets-social
 ![enter image description here](https://ppf.edu.gr/coconut/wp-content/uploads/2020/08/IMG_20200812_193547-1024x575.jpg)
-<iframe width="560" height="315" src="https://www.youtube.com/embed/bNgPL4YPK-M" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+[![IMAGE ALT TEXT HERE](https://i9.ytimg.com/vi/bNgPL4YPK-M/maxresdefault.jpg?time=1601242800000&sqp=CLCNxPsF&rs=AOn4CLBVX7KABQkj0J05vbfraez4SEQToQ)](https://www.youtube.com/watch?v=bNgPL4YPK-M)
 
 Συνεισφέρουμε όλοι! Παίρνουμε εύκολα μετρήσεις περιβαλλοντικών συνθηκών καθώς κάνουμε βόλτα με το ποδήλατο μας και τις ανεβάζουμε στο δίκτυο. Ο κάθε ένας και η κάθε μία από εμάς γίνεται ερευνητής στον τόπο του και προσφέρει τα δεδομένα που βρίσκει με τους υπόλοιπους!
 
