@@ -23,6 +23,9 @@ float temperature;                      //Μεταβλητή που θα κρα�
 float pressure;                         //Μεταβλητή που θα κρατάει την τιμή της βαρομετρικής πίεσης
 float humidity;                         //Μεταβλητή που θα κρατάει την τιμή της υγρασίας
 float altitude;                         //Μεταβλητή που θα κρατάει την τιμή του υψομέτρου
+const int sampleWindow = 50;            //Χρονικό παράθυρο μιας μέτρησης ήχου
+const int testWindow = 3000;            //Χρονικό παράθυρο μιας μέτρησης
+unsigned int sample;                    //Δείγμα ήχου
 float noise;                            //Μεταβλητή που θα κρατάει την τιμή του θορύβου
 
 //Συνάρτηση μετατροπής που χρειάζεται από τον αισθητήρα μικροσωματιδίων (την πήραμε από το πρόγραμμα δοκιμής)
@@ -82,70 +85,106 @@ void loop() {
     String command = BTserial.readString();   //Διαβάζουμε το μήνυμα
     Serial.println(command);                  //Γράφουμε το μήνυμα και στην σειριακή θύρα του υπολογιστή για έλεγχο του προγράμματος
     if (command == "getdata") {               //Αν το μήνυμα που πήραμε είναι το getdata τότε πρέπει να μαζέψουμε τα δεδομένα
-      //Μαζεύουμε τα δεδομένα από τον αισθητήρα bme280
-      if (result_bme == true) {
-        temperature = bme.readTemperature();
-        pressure = bme.readPressure()/100.0F;
-        humidity = bme.readHumidity();
-        altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
-      } 
-      //Μαζεύουμε τα δεδομένα από τον αισθητήρα θορύβου (ΑΚΟΜΑ ΔΕΝ ΤΟ ΕΧΟΥΜΕ ΠΕΤΥΧΕΙ
-      noise = 0;
-      ////Μαζεύουμε τα δεδομένα από τον αισθητήρα μικροσωματιδίων
-      digitalWrite(ledPin, HIGH);
-      delayMicroseconds(280);
-      adcvalue = analogRead(dustPin);
-      digitalWrite(ledPin, LOW);
-      adcvalue = Filter(adcvalue);
-      voltage = (SYS_VOLTAGE / 1024.0) * adcvalue * 11;
-      if(voltage >= NO_DUST_VOLTAGE)
-      {
-        voltage -= NO_DUST_VOLTAGE;
-        density = voltage * COV_RATIO;
-      }
-      else
-        density = 0;
+      unsigned long startTestMillis= millis();//Η συλλογή δεδομένων θα γίνει για 3 δευτερόλεπτα
+      double voltsSum = 0;                    //Άθροισμα τιμών ήχου (volts προς το παρόν)
+      float temperatureSum = 0;               //Άθροισμα τιμών θερμοκρασίας
+      float pressureSum = 0;                  //Άθροισμα τιμών πίεσης
+      float humiditySum = 0;                  //Άθροισμα τιμών υγρασίας
+      float altitudeSum = 0;                  //Άθροισμα τιμών υψομέτρου
+      float densitySum = 0;
+      int testCount = 0;                      //Μετρητής μετρήσεων
+      while (millis() - startTestMillis < testWindow) { //Ξεκινάμε την συλλογή δεδομένων για 3 δευτερόλεπτα
+        testCount = testCount+1;              //Αυξάνουμε τον μετρητή των τεστ
+        
+        unsigned long startMillis= millis();  //Ξεκινάμε το χρονικό παράθυρο για την συλλογή του ήχου
+        unsigned int peakToPeak = 0;          
+        unsigned int signalMax = 0;
+        unsigned int signalMin = 1024;
+        // Συλλογή ήχων για 50 χιλιοδευτερόλεπτα
+        while (millis() - startMillis < sampleWindow) {
+          sample = analogRead(A3);
+          if (sample < 1024) {
+            if (sample > signalMax) {
+              signalMax = sample;
+            } else if (sample < signalMin) {
+              signalMin = sample;  // save just the min levels
+            }
+          }
+        }
+        peakToPeak = signalMax - signalMin;  // max - min = peak-peak amplitude
+        double volts = (peakToPeak * 5.0) / 1024;  // convert to volts
+        voltsSum = voltsSum+volts;
 
+        //Μαζεύουμε τα δεδομένα από τον αισθητήρα bme280
+        if (result_bme == true) {
+          temperature = bme.readTemperature();
+          pressure = bme.readPressure()/100.0F;
+          humidity = bme.readHumidity();
+          altitude = bme.readAltitude(SEALEVELPRESSURE_HPA);
+        }
+        temperatureSum = temperatureSum + temperature;
+        pressureSum = pressureSum + pressure;
+        humiditySum = humiditySum + humidity;
+        altitudeSum = altitudeSum + altitude;
+
+        ////Μαζεύουμε τα δεδομένα από τον αισθητήρα μικροσωματιδίων
+        digitalWrite(ledPin, HIGH);
+        delayMicroseconds(280);
+        adcvalue = analogRead(dustPin);
+        digitalWrite(ledPin, LOW);
+        adcvalue = Filter(adcvalue);
+        voltage = (SYS_VOLTAGE / 1024.0) * adcvalue * 11;
+        if(voltage >= NO_DUST_VOLTAGE)
+        {
+          voltage -= NO_DUST_VOLTAGE;
+          density = voltage * COV_RATIO;
+        }
+        else
+          density = 0;
+
+        densitySum = densitySum + density;
+      }
+      
       //Στέλνουμε τα δεδομένα και στην σειριακή θύρα του υπολογιστή για έλεγχο δεδομένων
       if (result_bme == true) {
         //Temperature
         Serial.print("temperature:");                           
-        Serial.print(temperature);
+        Serial.print(temperatureSum/testCount);
         Serial.println("*C   ");
         //Pressure
         Serial.print("pressure:");
-        Serial.print(pressure);
+        Serial.print(pressureSum/testCount);
         Serial.println("hPa   ");
         //Humidity
         Serial.print("humidity:");
-        Serial.print(humidity);
+        Serial.print(humiditySum/testCount);
         Serial.println("%   ");
         //Altitude
         Serial.print("altitude:");
-        Serial.print(altitude);
+        Serial.print(altitudeSum/testCount);
         Serial.println("m");
       }
       //Noise
-      Serial.print("noise = ");
-      Serial.println(noise);
+      Serial.print("noise Volts = ");
+      Serial.println(voltsSum/testCount);
       //Particles
       Serial.println("GP2Y1010AU0F readings");
       Serial.print("density = ");
-      Serial.print(density);
+      Serial.print(densitySum/testCount);
       Serial.println("mg/m3");
       
       //Στέλνουμε τα δεδομένα στο κινητό τηλέφωνο μέσω bluetooth
-      BTserial.print(temperature);
+      BTserial.print(temperatureSum/testCount);
       BTserial.print("*");
-      BTserial.print(humidity);
+      BTserial.print(humiditySum/testCount);
       BTserial.print("*");
-      BTserial.print(noise);
+      BTserial.print(voltsSum/testCount);
       BTserial.print("*");
-      BTserial.print(density);
+      BTserial.print(densitySum/testCount);
       BTserial.print("*");
-      BTserial.print(pressure);
+      BTserial.print(pressureSum/testCount);
       BTserial.print("*");
-      BTserial.println(altitude);
+      BTserial.println(altitudeSum/testCount);
     }
   }
 }
